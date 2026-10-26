@@ -1,0 +1,113 @@
+/* Mobile-first, responsive. No external fonts or frameworks. */
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  line-height: 1.5;
+  color: #1a1a1a;
+  background: #f4f4f5;
+}
+
+.site-header, .site-footer {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 0.5rem;
+}
+
+.site-header h1 { margin: 0 0 0.25rem; font-size: 1.9rem; }
+.tagline { margin: 0; color: #555; }
+
+.layout {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 1rem;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.limits {
+  max-width: 1080px;
+  margin: 0 auto 1rem;
+  width: calc(100% - 2rem);
+}
+
+.dropzone {
+  display: block;
+  border: 2px dashed #888;
+  border-radius: 10px;
+  padding: 2rem 1rem;
+  text-align: center;
+  cursor: pointer;
+  margin: 1rem 0;
+}
+/* Visually hidden, but still activatable via its <label> — unlike
+   display:none / hidden inputs, which some mobile browsers ignore. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.dropzone:hover, .dropzone:focus-within { border-color: #0b5fff; background: #eef4ff; }
+.dropzone-text { display: block; font-weight: 600; font-size: 1.05rem; }
+.dropzone-hint { color: #555; font-size: 0.9rem; }
+
+button {
+  width: 100%;
+  min-height: 48px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  border: 0;
+  border-radius: 10px;
+  background: #0b5fff;
+  color: #fff;
+  cursor: pointer;
+}
+button:disabled { background: #aaa; cursor: not-allowed; }
+
+.error { color: #a00; font-weight: 600; }
+
+.preview { margin: 1rem 0 0; }
+.preview img {
+  width: 100%;
+  height: auto;
+  max-height: 420px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: #eee;
+}
+
+.verdict { font-size: 1.4rem; font-weight: 700; margin: 0.5rem 0; }
+.verdict.ai { color: #8a1c1c; }
+.verdict.real { color: #14632e; }
+.verdict.uncertain { color: #7a5a00; }
+
+.score-bar {
+  height: 16px;
+  background: #e5e5e5;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.score-fill { height: 100%; width: 50%; background: #0b5fff; }
+.score-legend { color: #555; font-size: 0.9rem; }
+
+.site-footer { padding-bottom: 2rem; color: #555; text-align: center; }
+
+/* PC / tablet: two columns side by side, narrower buttons */
+@media (min-width: 800px) {
+  .layout { grid-template-columns: 1fr 1fr; }
+  .site-header h1 { font-size: 2.4rem; }
+  button { width: auto; min-width: 220px; }
+}
