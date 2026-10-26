@@ -3,20 +3,30 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b5fff">
 <title>AI Image Checker</title>
 <meta name="description" content="A simple, client-side heuristic checker: is this image likely AI-generated, or a real camera photo?">
 <link rel="stylesheet" href="style.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to the image checker</a>
+
 <header class="site-header">
   <h1>AI Image Checker</h1>
   <p class="tagline">A simple heuristic check — not a definitive AI detector.</p>
+  <p class="privacy-note">Runs entirely on your device. Nothing is uploaded to a server.</p>
 </header>
 
-<main class="layout">
+<main class="layout" id="main">
   <section class="card upload-card" aria-labelledby="upload-heading">
     <h2 id="upload-heading">Check an image</h2>
-    <p>Your image stays on your device. Nothing is uploaded to a server.</p>
+    <ol class="steps" aria-label="How to use the checker">
+      <li><strong>Choose</strong> an image below.</li>
+      <li><strong>Check</strong> it — the result appears on the right, or below on a phone.</li>
+      <li><strong>Read</strong> the verdict with the guide below, not as proof.</li>
+    </ol>
 
     <label class="dropzone" id="dropzone" for="file-input">
       <span class="dropzone-text">Tap to choose an image, or drag one here</span>
@@ -44,12 +54,23 @@
       <div class="score-bar" role="img" aria-label="AI likelihood score bar">
         <div class="score-fill" id="score-fill"></div>
       </div>
+      <p class="score-scale" aria-hidden="true"><span>0</span><span>35</span><span>75</span><span>100</span></p>
       <p class="score-legend">0 = most like a real camera photo &nbsp;·&nbsp; 50 = uncertain &nbsp;·&nbsp; 100 = most like AI-generated</p>
       <h3>Reasons</h3>
       <ul id="reasons"></ul>
     </div>
   </section>
 </main>
+
+<section class="card how-to-read" aria-labelledby="how-to-read-heading">
+  <h2 id="how-to-read-heading">How to read this result</h2>
+  <ul>
+    <li><strong>Likely AI-generated</strong> — strong clues point that way, such as a generator name in the file data. It is still a hint, not proof.</li>
+    <li><strong>Uncertain</strong> — the clues are mixed, weak, or missing. Many real photos and many AI images land here.</li>
+    <li><strong>Likely real / camera photo</strong> — camera clues point that way. A fake camera tag can still fool this check.</li>
+    <li><strong>The score is a lean, not a percentage.</strong> 55 does not mean “55% AI.” It means the clues lean only slightly toward AI, from a starting point of 50.</li>
+  </ul>
+</section>
 
 <section class="card limits">
   <h2>What this does — and doesn't — do</h2>

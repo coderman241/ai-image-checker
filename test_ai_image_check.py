@@ -97,6 +97,38 @@ def _write_png(path, rgb=(200, 50, 50), size=16, text_chunks=None):
     return path
 
 
+def _write_checkerboard_png(path, size=16):
+    """Write a valid, high-texture checkerboard PNG using only stdlib.
+
+    Alternating black/white pixels give a very high mean neighbour
+    difference, the opposite of a smooth solid-colour image, so it
+    exercises the textured-image branch of the checker.
+    """
+    path = Path(path)
+    rows = []
+    for y in range(size):
+        row = bytearray(b"\x00")
+        for x in range(size):
+            row += bytes((0, 0, 0)) if (x + y) % 2 == 0 else bytes((255, 255, 255))
+        rows.append(bytes(row))
+    idat = zlib.compress(b"".join(rows))
+
+    def chunk(chunk_type, data):
+        return (
+            struct.pack(">I", len(data))
+            + chunk_type
+            + data
+            + struct.pack(">I", zlib.crc32(chunk_type + data) & 0xFFFFFFFF)
+        )
+
+    out = bytearray(b"\x89PNG\r\n\x1a\n")
+    out += chunk(b"IHDR", struct.pack(">IIBBBBB", size, size, 8, 2, 0, 0, 0))
+    out += chunk(b"IDAT", idat)
+    out += chunk(b"IEND", b"")
+    path.write_bytes(bytes(out))
+    return path
+
+
 def _normalise_result(raw):
     """Normalise a dict / object / tuple result to verdict/score/reasons."""
     verdict = None
@@ -375,6 +407,173 @@ class TestAiImageCheck(unittest.TestCase):
         self.assertIsInstance(reasons, list, f"Reasons was not a list: {reasons!r}")
         for reason in reasons:
             self.assertIsInstance(reason, str)
+
+    # -- added coverage: direction, thresholds, errors, JSON ---------
+
+    def test_generator_metadata_scores_strictly_higher_and_reaches_ai(self):
+        """A generator text chunk raises the score, not just keeps it level.
+
+        Same solid image, with and without a Midjourney tEXt chunk.
+        The metadata version must score strictly higher, and with
+        this checker's documented thresholds it must reach
+        'likely AI-generated' (>= 75) while the plain version does not.
+        """
+        base_result, base_exc, _ = _check(self._solid_png("base2.png"))
+        meta_result, meta_exc, _ = _check(
+            self._solid_png(
+                "meta2.png",
+                text_chunks=[("Software", "Midjourney")],
+            )
+        )
+        self.assertIsNone(base_exc)
+        self.assertIsNone(meta_exc)
+        self.assertGreater(meta_result["score"], base_result["score"],
+                           "Generator metadata did not raise the AI score")
+        self.assertGreaterEqual(meta_result["score"], 75)
+        self.assertIn("likely ai", meta_result["verdict"].lower())
+        self.assertNotIn("likely ai", base_result["verdict"].lower())
+
+    def test_camera_metadata_scores_lower_and_reaches_real(self):
+        """A camera-make text chunk lowers the score.
+
+        Same solid image, with and without a Canon tEXt chunk. The
+        camera version must score strictly lower, and with this
+        checker's documented thresholds it must reach
+        'likely real / camera photo' (<= 35).
+
+        Note: the test colour is a low-saturation grey, so the
+        saturation bonus does not apply and the arithmetic is
+        base 65 (50 + 5 no-EXIF + 10 smooth) vs camera 35
+        (50 - 25 camera + 10 smooth).
+        """
+        base_result, base_exc, _ = _check(
+            self._solid_png("base3.png", rgb=(120, 120, 110)))
+        cam_result, cam_exc, _ = _check(
+            self._solid_png(
+                "camera.png",
+                rgb=(120, 120, 110),
+                text_chunks=[("Make", "Canon")],
+            )
+        )
+        self.assertIsNone(base_exc)
+        self.assertIsNone(cam_exc)
+        self.assertLess(cam_result["score"], base_result["score"],
+                        "Camera metadata did not lower the AI score")
+        self.assertLessEqual(cam_result["score"], 35)
+        self.assertIn("likely real", cam_result["verdict"].lower())
+
+    def test_software_only_scores_between_plain_and_camera(self):
+        """Software-only provenance scores above plain, below generator.
+
+        A Photoshop tEXt chunk with no camera make must not be
+        treated like a camera photo, and must not by itself reach
+        'likely AI-generated'.
+
+        Note: low-saturation grey is used (see the camera test), so
+        the arithmetic is plain 65 vs software-only 70
+        (50 + 10 software + 10 smooth), both below the 75 threshold.
+        """
+        plain_result, _, _ = _check(
+            self._solid_png("plain2.png", rgb=(120, 120, 110)))
+        soft_result, soft_exc, _ = _check(
+            self._solid_png(
+                "software.png",
+                rgb=(120, 120, 110),
+                text_chunks=[("Software", "Adobe Photoshop")],
+            )
+        )
+        self.assertIsNone(soft_exc)
+        self.assertGreaterEqual(soft_result["score"], plain_result["score"])
+        self.assertLess(soft_result["score"], 75,
+                        "Software-only provenance alone reached 'likely AI'")
+
+    def test_textured_image_scores_lower_than_smooth_image(self):
+        """A high-texture checkerboard scores lower than a smooth solid image."""
+        smooth_result, _, _ = _check(self._solid_png("smooth.png"))
+        textured_path = _write_checkerboard_png(self.dir / "checker.png")
+        textured_result, textured_exc, _ = _check(textured_path)
+        self.assertIsNone(textured_exc)
+        self.assertLess(textured_result["score"], smooth_result["score"],
+                        "Textured image did not score lower than a smooth image")
+
+    def test_empty_file_and_fake_image_extension_give_clear_errors(self):
+        """Empty files and text renamed as .png give clear errors, not crashes."""
+        empty = self.dir / "empty.png"
+        empty.write_bytes(b"")
+        result, exc, proc = _check(empty)
+        if proc is not None:
+            combined = ((proc.stderr or "") + "\n" + (proc.stdout or "")).lower()
+            self.assertNotIn("traceback", combined)
+            self.assertNotEqual(proc.returncode, 0)
+        else:
+            self.assertIsNotNone(exc or (result and result.get("error")))
+
+        fake = self.dir / "fake.png"
+        fake.write_text("this is text, not a PNG\n", encoding="utf-8")
+        result, exc, proc = _check(fake)
+        if proc is not None:
+            combined = ((proc.stderr or "") + "\n" + (proc.stdout or "")).lower()
+            self.assertNotIn("traceback", combined)
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertTrue(
+                any(w in combined for w in ("not a supported", "not an image", "error", "invalid", "unsupported")),
+                f"Fake-image error was not clear: {combined!r}",
+            )
+        else:
+            self.assertIsNotNone(exc or (result and result.get("error")))
+
+    def test_truncated_png_does_not_crash(self):
+        """A PNG header with no image data must not produce a traceback."""
+        bad = self.dir / "truncated.png"
+        bad.write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x00" * 20)
+        result, exc, proc = _check(bad)
+        if proc is not None:
+            combined = ((proc.stderr or "") + "\n" + (proc.stdout or "")).lower()
+            self.assertNotIn("traceback", combined,
+                             "Truncated PNG produced an unhandled traceback")
+            # Either a clear error (exit 2) or a handled uncertain
+            # verdict is acceptable; a crash is not.
+            if proc.returncode == 0:
+                self.assertIsNotNone(result)
+        else:
+            # Function path: an exception with a message, or a result.
+            self.assertTrue(exc is not None or result is not None)
+
+    def test_json_output_carries_metadata_and_score(self):
+        """--json output carries format, metadata keywords, score and reasons."""
+        image = self._solid_png(
+            "json.png",
+            text_chunks=[("Software", "Midjourney")],
+        )
+        proc = subprocess.run(
+            [sys.executable, str(SCRIPT), str(image), "--json"],
+            capture_output=True, text=True, timeout=60,
+        )
+        self.assertEqual(proc.returncode, 0, f"CLI failed: {proc.stderr!r}")
+        self.assertNotIn("traceback", (proc.stdout + proc.stderr).lower())
+        data = json.loads(proc.stdout)
+        self.assertEqual(data["format"], "PNG")
+        self.assertIn("score", data)
+        self.assertTrue(0 <= data["score"] <= 100)
+        self.assertIn("likely ai", str(data["verdict"]).lower())
+        self.assertIsInstance(data["reasons"], list)
+        self.assertTrue(data["reasons"])
+        self.assertTrue(all(isinstance(r, str) for r in data["reasons"]))
+        # Metadata block, when present, must name what was found.
+        metadata = data.get("metadata") or {}
+        generator = metadata.get("generator_keywords") or []
+        self.assertTrue(any("midjourney" in str(g).lower() for g in generator),
+                        f"JSON metadata did not report Midjourney: {metadata!r}")
+
+    def test_same_image_is_deterministic(self):
+        """Checking the same file twice gives the same score and verdict."""
+        image = self._solid_png("twice.png")
+        first, exc1, _ = _check(image)
+        second, exc2, _ = _check(image)
+        self.assertIsNone(exc1)
+        self.assertIsNone(exc2)
+        self.assertEqual(first["score"], second["score"])
+        self.assertEqual(first["verdict"], second["verdict"])
 
 
 if __name__ == "__main__":

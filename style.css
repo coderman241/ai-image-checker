@@ -1,13 +1,42 @@
-/* Mobile-first, responsive. No external fonts or frameworks. */
+/* Mobile-first, responsive. No external fonts, frameworks, or network requests. */
 * { box-sizing: border-box; }
+
+:root {
+  --text: #1a1a1a;
+  --muted: #444;
+  --page-bg: #f4f4f5;
+  --card-bg: #fff;
+  --card-border: #ddd;
+  --accent: #0b5fff;
+  --accent-dark: #0849cc;
+  --accent-soft: #eef4ff;
+  --track: #e5e5e5;
+  --error: #a00;
+  --focus: #0b5fff;
+}
 
 body {
   margin: 0;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-  line-height: 1.5;
-  color: #1a1a1a;
-  background: #f4f4f5;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--page-bg);
 }
+
+/* Keyboard users: a visible skip link, hidden until focused. */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  background: var(--accent);
+  color: #fff;
+  padding: 0.75rem 1rem;
+  border-radius: 0 0 10px 0;
+  font-weight: 600;
+  z-index: 10;
+}
+.skip-link:focus { left: 0; }
 
 .site-header, .site-footer {
   max-width: 1080px;
@@ -15,8 +44,22 @@ body {
   padding: 1.25rem 1rem 0.5rem;
 }
 
-.site-header h1 { margin: 0 0 0.25rem; font-size: 1.9rem; }
-.tagline { margin: 0; color: #555; }
+.site-header h1 {
+  margin: 0 0 0.25rem;
+  font-size: clamp(1.9rem, 6vw, 2.4rem);
+  line-height: 1.2;
+}
+.tagline { margin: 0; color: var(--muted); font-size: 1.1rem; }
+.privacy-note {
+  margin: 0.5rem 0 0;
+  display: inline-block;
+  background: var(--accent-soft);
+  color: #123a7a;
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
 
 .layout {
   max-width: 1080px;
@@ -25,29 +68,41 @@ body {
   display: grid;
   gap: 1rem;
   grid-template-columns: 1fr;
+  align-items: start;
 }
 
 .card {
-  background: #fff;
-  border: 1px solid #ddd;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 12px;
   padding: 1.25rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
-.limits {
+.card h2 { margin-top: 0; line-height: 1.3; }
+.card ul, .card ol { padding-left: 1.4rem; }
+.card li { margin-bottom: 0.5rem; }
+
+.how-to-read, .limits {
   max-width: 1080px;
   margin: 0 auto 1rem;
   width: calc(100% - 2rem);
 }
 
+/* Numbered steps, kept compact on phones. */
+.steps { margin: 0 0 0.5rem; color: var(--muted); }
+.steps strong { color: var(--text); }
+
 .dropzone {
   display: block;
-  border: 2px dashed #888;
+  border: 2px dashed #767676;
   border-radius: 10px;
-  padding: 2rem 1rem;
+  padding: 2.25rem 1rem;
+  min-height: 132px;
   text-align: center;
   cursor: pointer;
   margin: 1rem 0;
+  transition: border-color 150ms ease, background-color 150ms ease;
 }
 /* Visually hidden, but still activatable via its <label> — unlike
    display:none / hidden inputs, which some mobile browsers ignore. */
@@ -60,26 +115,37 @@ body {
   white-space: nowrap;
 }
 
-.dropzone:hover, .dropzone:focus-within { border-color: #0b5fff; background: #eef4ff; }
-.dropzone-text { display: block; font-weight: 600; font-size: 1.05rem; }
-.dropzone-hint { color: #555; font-size: 0.9rem; }
+.dropzone:hover, .dropzone:focus-within { border-color: var(--accent); background: var(--accent-soft); }
+.dropzone:active { background: #dde9ff; }
+.dropzone-text { display: block; font-weight: 700; font-size: 1.1rem; }
+.dropzone-hint { color: var(--muted); font-size: 0.95rem; }
 
 button {
   width: 100%;
-  min-height: 48px;
-  font-size: 1.05rem;
-  font-weight: 600;
+  min-height: 52px;
+  padding: 0.75rem 1.25rem;
+  font-size: 1.1rem;
+  font-weight: 700;
   border: 0;
   border-radius: 10px;
-  background: #0b5fff;
+  background: var(--accent);
   color: #fff;
   cursor: pointer;
+  transition: background-color 150ms ease;
 }
-button:disabled { background: #aaa; cursor: not-allowed; }
+button:hover:not(:disabled) { background: var(--accent-dark); }
+button:active:not(:disabled) { background: #063a9e; }
+/* Clear keyboard focus, without relying on the browser default alone. */
+button:focus-visible, .dropzone:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+/* Higher-contrast disabled state than white-on-grey. */
+button:disabled { background: #d9d9d9; color: #595959; cursor: not-allowed; }
 
-.error { color: #a00; font-weight: 600; }
+.error { color: var(--error); font-weight: 700; }
 
-.preview { margin: 1rem 0 0; }
+.preview { margin: 1.25rem 0 0; }
 .preview img {
   width: 100%;
   height: auto;
@@ -88,26 +154,70 @@ button:disabled { background: #aaa; cursor: not-allowed; }
   border-radius: 8px;
   background: #eee;
 }
+.preview figcaption {
+  margin-top: 0.5rem;
+  color: var(--muted);
+  font-size: 0.95rem;
+  overflow-wrap: anywhere;
+}
 
-.verdict { font-size: 1.4rem; font-weight: 700; margin: 0.5rem 0; }
+.verdict { font-size: 1.5rem; font-weight: 800; margin: 0.5rem 0; line-height: 1.3; }
 .verdict.ai { color: #8a1c1c; }
 .verdict.real { color: #14632e; }
 .verdict.uncertain { color: #7a5a00; }
 
+.score-line { font-size: 1.1rem; }
 .score-bar {
-  height: 16px;
-  background: #e5e5e5;
-  border-radius: 8px;
+  height: 20px;
+  background: var(--track);
+  border-radius: 10px;
   overflow: hidden;
 }
-.score-fill { height: 100%; width: 50%; background: #0b5fff; }
-.score-legend { color: #555; font-size: 0.9rem; }
+.score-fill { height: 100%; width: 50%; background: var(--accent); }
+/* Threshold markers under the bar: 0, 35, 75, 100. Purely visual;
+   the score value itself is still set by script.js. */
+.score-scale {
+  display: flex;
+  justify-content: space-between;
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.score-legend { color: var(--muted); font-size: 0.95rem; }
 
-.site-footer { padding-bottom: 2rem; color: #555; text-align: center; }
+#reasons li { margin-bottom: 0.6rem; }
 
-/* PC / tablet: two columns side by side, narrower buttons */
+.site-footer { padding-bottom: 2rem; color: var(--muted); text-align: center; }
+
+/* PC / tablet: two columns side by side, narrower button, result
+   stays visible at the top while scrolling the upload column. */
 @media (min-width: 800px) {
   .layout { grid-template-columns: 1fr 1fr; }
-  .site-header h1 { font-size: 2.4rem; }
+  .result-card { position: sticky; top: 1rem; }
   button { width: auto; min-width: 220px; }
+  .card { padding: 1.5rem; }
+}
+
+/* Dark mode, using only system colours — no extra downloads. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #f2f2f2;
+    --muted: #c9c9c9;
+    --page-bg: #17181a;
+    --card-bg: #232527;
+    --card-border: #444;
+    --accent-soft: #1e2f52;
+    --track: #444;
+  }
+  .privacy-note { color: #cfe0ff; }
+  .dropzone { border-color: #999; }
+  .preview img { background: #333; }
+  button:disabled { background: #444; color: #ccc; }
+  .verdict.ai { color: #ff9a9a; }
+  .verdict.real { color: #8fd9a8; }
+  .verdict.uncertain { color: #ffd970; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dropzone, button { transition: none; }
 }

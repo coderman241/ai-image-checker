@@ -1,0 +1,1 @@
+{"background_color":"#f4f4f5","description":"A simple, client-side heuristic checker: is this image likely AI-generated, or a real camera photo?","display":"standalone","icons":[{"purpose":"any","sizes":"any","src":"favicon.svg","type":"image/svg+xml"}],"name":"AI Image Checker","scope":".","short_name":"AI Checker","start_url":".","theme_color":"#0b5fff"}

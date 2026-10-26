@@ -87,22 +87,46 @@ Replace `<image_path>` with the path to the image you want to check.
 Pillow is optional: if installed, simple image statistics are included;
 if not, the program still runs on metadata and format clues alone.
 
-Tests: `python -m unittest test_ai_image_check.py -v`
+## Tests
+
+File: `test_ai_image_check.py` (Python standard library only, no
+third-party test framework).
+
+```sh
+python -m unittest test_ai_image_check.py -v
+```
+
+Tests generate every test image inside a temporary directory, so no
+binary test images are committed. Coverage includes:
+
+- Missing files, empty files, non-image files, text renamed as
+  `.png`, and truncated PNGs give clear errors — never an unhandled
+  traceback.
+- The same solid image with and without metadata: a generator chunk
+  (for example Midjourney) scores strictly higher and reaches
+  `likely AI-generated`; a camera-make chunk (for example Canon)
+  scores strictly lower and reaches `likely real / camera photo`;
+  software-only provenance sits in between and does not by itself
+  reach `likely AI-generated`.
+- A high-texture checkerboard scores lower than a smooth solid image.
+- Every result has a valid verdict, a numeric score in 0–100, and a
+  list of string reasons; `--json` output also carries the format and
+  metadata keywords found.
+- Checking the same file twice gives the same score and verdict.
 
 ## GitHub Pages
 
-`index.html` sits at the repo root, so GitHub Pages can serve it
-directly. After uploading the files to GitHub:
+Live site: https://coderman241.github.io/ai-image-checker/
+
+Repo: https://github.com/coderman241/ai-image-checker
+
+`index.html` sits at the repo root, so GitHub Pages serves it
+directly. The published site is already set to deploy from branch
+**main**, folder **/ (root)**. If it ever needs re-enabling:
 
 1. Go to the repo's **Settings > Pages**.
 2. Under Build and deployment, choose **Deploy from a branch**.
 3. Choose branch **main** and folder **/ (root)**, then save.
-4. The site will be at:
-
-   `https://<owner>.github.io/ai-image-checker/`
-
-   Replace `<owner>` with the GitHub username or organization that
-   owns the repo.
 
 ## Limitations
 
